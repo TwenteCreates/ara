@@ -18,10 +18,10 @@ from paralleldots import sentiment
 translator = Translator()
 set_api_key(API_KEY)
 
-import pymongo
-from pymongo import Connection
+# import pymongo
+from pymongo import MongoClient
 
-conn = Connection()
+conn = MongoClient('146.185.169.151', '27017')
 db = conn['myDB']
 collection = db['language']
 
