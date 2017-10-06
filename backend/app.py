@@ -5,7 +5,7 @@ import os,sys
 import json
 import timeit
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from codes import API_KEY
 
@@ -21,24 +21,33 @@ set_api_key(API_KEY)
 # import pymongo
 from pymongo import MongoClient
 
-conn = MongoClient('146.185.169.151', 27017)
-db = conn['myDB']
-collection = db['language']
+client = MongoClient('146.185.169.151', 27017)
+db = client.test_database
+collection = db.chats1
 
-#Creating a collection
-db.language.insert({"id": "1", "name": "C", "grade":"Boring"})
-db.language.insert({"id": "2", "name":"Python", "grade":"Interesting"})
+@app.route('/create', methods=['POST'])
+def create_message():
+    request_json = request.get_json()
+    if not request_json:
+        abort(404)
+    res = db.chats1.insert(request_json)
+    return jsonify(res)
 
-#Reading it
-print "After create\n",list(db.language.find())
 
-#Updating the collection
-db.language.update({"name":"C"}, {"$set":{"grade":"Make it interesting"}})
-print "After update\n",list(db.language.find())
-
-#Deleting the collection
-db.language.drop()
-print "After delete\n", list(db.language.find())
+# #Creating a collection
+# db.language.insert({"id": "1", "name": "C", "grade":"Boring"})
+# db.language.insert({"id": "2", "name":"Python", "grade":"Interesting"})
+#
+# #Reading it
+# print "After create\n",list(db.language.find())
+#
+# #Updating the collection
+# db.language.update({"name":"C"}, {"$set":{"grade":"Make it interesting"}})
+# print "After update\n",list(db.language.find())
+#
+# #Deleting the collection
+# db.language.drop()
+# print "After delete\n", list(db.language.find())
 
 
 @app.route('/translate', methods=['GET'])
