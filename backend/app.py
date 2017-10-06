@@ -95,7 +95,7 @@ def read_user():
 
 
 @app.route('/user', methods=['DELETE'])
-def delete_message():
+def delete_user():
     request_json = request.get_json()
     if not request_json:
         print('you have to pass the condition, otherwise I will delete everything')
