@@ -28,10 +28,11 @@ collection = db.chats1
 @app.route('/create', methods=['POST'])
 def create_message():
     request_json = request.get_json()
+    print request_json
     if not request_json:
         abort(404)
     res = db.chats1.insert(request_json)
-    return jsonify(res)
+    return jsonify({})
 
 
 # #Creating a collection
