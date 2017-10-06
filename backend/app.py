@@ -25,7 +25,7 @@ client = MongoClient('146.185.169.151', 27017)
 db = client.test_database
 collection = db.chats1
 
-@app.route('/create', methods=['POST'])
+@app.route('/chat', methods=['POST'])
 def create_message():
     request_json = request.get_json()
     print request_json
@@ -34,7 +34,7 @@ def create_message():
     res = db.chats1.insert(request_json)
     return jsonify({})
 
-@app.route('/read', methods=['GET'])
+@app.route('/chat', methods=['GET'])
 def read_message():
     request_json = request.get_json()
     if not request_json:
@@ -49,7 +49,7 @@ def read_message():
 # @app.route('/update', methods=['PUT'])
 # def update_m
 
-@app.route('/delete', methods=['DELETE'])
+@app.route('/chat', methods=['DELETE'])
 def delete_message():
     request_json = request.get_json()
     if not request_json:
@@ -91,10 +91,10 @@ def sentiment_api_call():
     resp = x
     return jsonify(resp)
 
-
-@app.route('/')
-def hello_world():
-  return 'Hello from Flask!'
+#
+# @app.route('/')
+# def hello_world():
+#   return 'Hello from Flask!'
 
 if __name__ == '__main__':
   app.run()
