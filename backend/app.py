@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from flask import Flask
-import boto3
 import os,sys
 import json
 import timeit
@@ -19,12 +18,16 @@ from paralleldots import sentiment
 translator = Translator()
 set_api_key(API_KEY)
 
+
+# def
+
 @app.route('/translate', methods=['GET'])
 def translate_api_call():
     resp = dict()
     text = request.values.get('text', '')
+    dest = request.values.get('dest', 'en')
     print(text)
-    x = translator.translate(text)
+    x = translator.translate(text, dest=dest)
     resp['value'] = x.text
     return jsonify(resp)
 
@@ -32,8 +35,7 @@ def translate_api_call():
 def sentiment_api_call():
     resp = dict()
     text = request.values.get('text', '')
-    # print(text)
-    x = sentiment(str(text)) #"It is going to be difficult")
+    x = sentiment(str(text))
     resp = x
     return jsonify(resp)
 
