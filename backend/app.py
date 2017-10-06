@@ -32,7 +32,10 @@ def create_message():
     if not request_json:
         abort(404)
     res = db.chats1.insert(request_json)
-    res.pop('_id')
+    if res:
+        res = {
+            "response": "Success"
+        }
     return jsonify(res)
 
 @app.route('/chat', methods=['GET'])
