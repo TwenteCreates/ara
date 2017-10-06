@@ -24,6 +24,8 @@ from pymongo import MongoClient
 client = MongoClient('146.185.169.151', 27017)
 db = client.test_database
 collection = db.chats1
+collection2 = db.users1
+
 
 @app.route('/chat', methods=['POST'])
 def create_message():
@@ -50,8 +52,6 @@ def read_message():
         lis.append(element)
     return jsonify(lis)
 
-# @app.route('/update', methods=['PUT'])
-# def update_m
 
 @app.route('/chat', methods=['DELETE'])
 def delete_message():
@@ -61,20 +61,46 @@ def delete_message():
         db.chats1.drop()
     return jsonify({})
 
-# #Creating a collection
-# db.language.insert({"id": "1", "name": "C", "grade":"Boring"})
-# db.language.insert({"id": "2", "name":"Python", "grade":"Interesting"})
-#
-# #Reading it
-# print "After create\n",list(db.language.find())
-#
-# #Updating the collection
-# db.language.update({"name":"C"}, {"$set":{"grade":"Make it interesting"}})
-# print "After update\n",list(db.language.find())
-#
-# #Deleting the collection
-# db.language.drop()
-# print "After delete\n", list(db.language.find())
+
+
+@app.route('/user', methods=['POST'])
+def create_user():
+    request_json = request.get_json()
+    print request_json
+    if not request_json:
+        abort(404)
+    obj_id = db.users1.insert(request_json)
+    if obj_id:
+        res = {
+            "response": "Success"
+            "user_id": str(obj_id)
+        }
+    else:
+        res = {
+            "response": "Failure"
+        }
+    return jsonify(res)
+
+@app.route('/user', methods=['GET'])
+def read_user():
+    request_json = request.get_json()
+    if not request_json:
+        pass
+    res = db.users1.find()
+    lis = []
+    for element in res:
+        element.pop('_id')
+        lis.append(element)
+    return jsonify(lis)
+
+
+@app.route('/user', methods=['DELETE'])
+def delete_message():
+    request_json = request.get_json()
+    if not request_json:
+        print('you have to pass the condition, otherwise I will delete everything')
+        db.users1.drop()
+    return jsonify({})
 
 
 @app.route('/translate', methods=['GET'])
