@@ -32,7 +32,8 @@ def create_message():
     if not request_json:
         abort(404)
     res = db.chats1.insert(request_json)
-    return jsonify({})
+    res.pop('_id')
+    return jsonify(res)
 
 @app.route('/chat', methods=['GET'])
 def read_message():
