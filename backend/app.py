@@ -31,7 +31,9 @@ def translate_api_call():
 @app.route('/sentiment', methods=['GET'])
 def sentiment_api_call():
     resp = dict()
-    x = sentiment("It is going to be difficult")
+    text = request.values.get('text', '')
+    # print(text)
+    x = sentiment(str(text)) #"It is going to be difficult")
     resp = x
     return jsonify(resp)
 
