@@ -8,3 +8,6 @@ function component() {
 }
 
 document.body.appendChild(component());
+
+require("angular");
+let app = angular.module("ara", []);
