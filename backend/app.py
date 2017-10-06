@@ -21,7 +21,7 @@ set_api_key(API_KEY)
 # import pymongo
 from pymongo import MongoClient
 
-conn = MongoClient('146.185.169.151', '27017')
+conn = MongoClient('146.185.169.151', 27017)
 db = conn['myDB']
 collection = db['language']
 
