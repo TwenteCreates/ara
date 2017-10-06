@@ -1,7 +1,42 @@
+@import url("https://fonts.googleapis.com/css?family=Lato:400,400i,700");
+
+
 body {
-	background: whitesmoke;
-	font-family: sans-serif;
-	a {
-		background: #aaa;
+	font-family: "Lato";
+}
+
+.app {
+	margin-top: 50px;
+}
+
+.message {
+	margin: 5px 0;
+	border-radius: 30px;
+	padding: 8px 20px;
+}
+
+.bg-color {
+	background: #8800f8 !important;
+	color: #8800f8;
+}
+
+.send-button {
+	svg {
+		transform: scale(2) translateY(1px);
+		width: 10px;
+		margin: 0 5px;
+		fill: #fff;
 	}
+}
+
+.navbar textarea.form-control {
+	height: 38px;
+	resize: none;
+}
+
+.avatar {
+	height: 40px;
+	width: 40px;
+	transform: translateY(5px);
+	border: 1px solid #ddd;
 }
