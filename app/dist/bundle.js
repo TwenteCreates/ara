@@ -17274,7 +17274,7 @@ exports = module.exports = __webpack_require__(6)(undefined);
 
 
 // module
-exports.push([module.i, "body {\n  background: whitesmoke; }\n  body a {\n    background: #aaa; }\n", ""]);
+exports.push([module.i, "body {\n  background: whitesmoke;\n  font-family: sans-serif; }\n  body a {\n    background: #aaa; }\n", ""]);
 
 // exports
 
