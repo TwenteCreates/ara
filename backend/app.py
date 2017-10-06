@@ -44,8 +44,14 @@ def create_message():
 def read_message():
     request_json = request.get_json()
     if not request_json:
-        pass
-    res = db.chats1.find()
+        raise
+    user1 = request_json.get("user1", "ara")
+    user2 = request_json.get("user2", "anand")
+    res = db.chats1.find(
+        {
+            "$or":[{"from": user1, "to": user2}, {"from": user2, "to": user1}]
+        }
+    )
     lis = []
     for element in res:
         element.pop('_id')
