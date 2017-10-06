@@ -22,7 +22,9 @@ set_api_key(API_KEY)
 @app.route('/translate', methods=['GET'])
 def translate_api_call():
     resp = dict()
-    x = translator.translate('hoe gaat het?')
+    text = request.values.get('text', '')
+    print(text)
+    x = translator.translate(text)
     resp['value'] = x.text
     return jsonify(resp)
 
