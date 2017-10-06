@@ -34,6 +34,15 @@ def create_message():
     res = db.chats1.insert(request_json)
     return jsonify({})
 
+@app.route('/read', methods=['GET'])
+def read_message():
+    request_json = request.get_json()
+    if not request_json:
+        pass
+    res = db.chats1.find()
+    return jsonify(res)
+
+
 
 # #Creating a collection
 # db.language.insert({"id": "1", "name": "C", "grade":"Boring"})
