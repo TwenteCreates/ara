@@ -72,7 +72,7 @@ def create_user():
     obj_id = db.users1.insert(request_json)
     if obj_id:
         res = {
-            "response": "Success"
+            "response": "Success",
             "user_id": str(obj_id)
         }
     else:
