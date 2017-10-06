@@ -40,9 +40,22 @@ def read_message():
     if not request_json:
         pass
     res = db.chats1.find()
-    return jsonify(res)
+    lis = []
+    for element in res:
+        element.pop('_id')
+        lis.append(element)
+    return jsonify(lis)
 
+# @app.route('/update', methods=['PUT'])
+# def update_m
 
+@app.route('/delete', methods=['DELETE'])
+def delete_message():
+    request_json = request.get_json()
+    if not request_json:
+        print('you have to pass the condition, otherwise I will delete everything')
+        db.chats1.drop()
+    return jsonify({})
 
 # #Creating a collection
 # db.language.insert({"id": "1", "name": "C", "grade":"Boring"})
