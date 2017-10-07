@@ -1,0 +1,37 @@
+<div>
+	<div class="app" style="padding-bottom: 50px">
+		<nav class="navbar navbar-light bg-light text-center fixed-top justify-content-center">
+			<h5 class="m-0 p-1 text-center">{{ user1.charAt(0).toUpperCase() + user1.slice(1) }} + {{ user2.charAt(0).toUpperCase() + user2.slice(1) }}</h5>
+		</nav>
+		<div ng-hide="messages.length > 0" class="text-center mt-5 pt-5">
+			<h1 class="mt-5 mb-5">:(</h1>
+			<h4>No Messages</h4>
+		</div>
+		<ul class="list-unstyled p-3">
+			<div ng-repeat="message in messages">
+				<li class="d-flex flex-row{{ message.from == user1 ? '-reverse' : '' }}">
+					<img alt="" ng-src="{{ message.from == 'ara' ? '/icons/apple-touch-icon-180x180-precomposed.png' : 'https://www.gravatar.com/avatar/x?d=mm' }}" class="rounded-circle avatar {{ message.from == user1 ? 'ml-2' : 'mr-2' }}">
+					<div class="message card bg-light border-0{{ message.from == user1 ? ' bg-color text-white' : '' }}">{{ message.text }}</div></div>
+				</li>
+				<li class="d-flex typing-text" ng-show="typing">
+					<img alt="" src="/icons/apple-touch-icon-180x180-precomposed.png" class="rounded-circle avatar mr-2">
+					<div class="message card bg-light border-0{{ message.from == user1 ? ' bg-color text-white' : '' }}">&bull; &bull; &bull;</div></div>
+				</li>
+			</div>
+		</ul>
+		<form ng-submit="sendMessage();" class="navbar fixed-bottom input-group p-3 bg-light">
+			<input type="text" ng-model="messageModel" class="form-control" placeholder="Message Ara...">
+			<span class="input-group-btn">
+				<button class="btn btn-danger send-button" type="button" ng-if="messageModel == null || messageModel == ''" ng-click="speechtoText()">
+					<svg xmlns:x="http://ns.adobe.com/Extensibility/1.0/" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" xmlns:graph="http://ns.adobe.com/Graphs/1.0/" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px" viewBox="-949 951 100 125" style="enable-background:new -949 951 100 100;" xml:space="preserve"><style type="text/css"> .st0{fill-rule:evenodd;clip-rule:evenodd;}</style><switch><foreignObject requiredExtensions="http://ns.adobe.com/AdobeIllustrator/10.0/" x="0" y="0" width="1" height="1"/><g i:extraneous="self"><g><path d="M-1822.1,1916.2c-8.5-11.8-24.3-16.4-37.8-10.9c-17.4,7.1-24.8,27.3-16.5,43.8l25.3,50c1.3,2.5,4.9,2.5,6.2,0l25.3-50 C-1814.6,1939.1-1814.8,1926.4-1822.1,1916.2z M-1848,1958.5c-13.1,0-23.7-10.6-23.7-23.7c0-13.1,10.6-23.8,23.7-23.8 c13.1,0,23.8,10.6,23.8,23.8C-1824.3,1947.9-1834.9,1958.5-1848,1958.5z"/><path d="M-1834.8,1921.5c-2-2-7.3,2.8-10.8,6.2l-14.9-1.7c-0.2,0-0.4,0.1-0.6,0.2l-1.4,1.4c-0.2,0.2-0.1,0.4,0.1,0.5l6.2,3.1 l-0.7,0.7c-0.1,0.1-0.1,0.4,0,0.5l0.4,0.4c0.1,0.1,0.4,0.1,0.5,0l1-1l3.8,1.9c-2.6,3.1-5.2,6.5-6.8,8.5h-5 c-0.2,0-0.4,0.1-0.6,0.2l-0.4,0.4c-0.1,0.1-0.1,0.3,0.1,0.4l4.7,2.6l2.6,4.7c0.1,0.2,0.3,0.2,0.4,0.1l0.4-0.4 c0.2-0.2,0.2-0.4,0.2-0.6v-5c2-1.6,5.4-4.2,8.5-6.8l1.9,3.8l-0.9,1c-0.1,0.1-0.1,0.4,0,0.5l0.4,0.4c0.1,0.1,0.4,0.1,0.5,0 l0.7-0.6l3.1,6.2c0.1,0.2,0.4,0.3,0.5,0.1l1.4-1.4c0.2-0.2,0.2-0.4,0.2-0.6l-1.7-14.9 C-1837.7,1928.8-1832.8,1923.5-1834.8,1921.5z"/></g><path class="st0" d="M-865.3,990.3c0,17-12.7,31.1-29.1,33.3v17.2h9.2c2.5,0,4.6,2.1,4.6,4.6s-2.1,4.6-4.6,4.6 H-899h-13.8c-2.5,0-4.6-2.1-4.6-4.6s2.1-4.6,4.6-4.6h9.2v-17.2c-16.4-2.2-29.1-16.3-29.1-33.3c0,0,0,0,0,0c0,0,0,0,0,0 c0-2.5,2.1-4.6,4.6-4.6c2.5,0,4.6,2.1,4.6,4.6h0c0,13.5,11,24.5,24.5,24.5c13.5,0,24.5-11,24.5-24.5h0c0-2.5,2.1-4.6,4.6-4.6 S-865.3,987.7-865.3,990.3C-865.3,990.3-865.3,990.3-865.3,990.3C-865.3,990.3-865.3,990.3-865.3,990.3z M-899,1007.1L-899,1007.1 c-10.1,0-18.4-8.2-18.4-18.4v-18.4c0-10.1,8.2-18.4,18.4-18.4l0,0c10.1,0,18.4,8.2,18.4,18.4v18.4 C-880.6,998.9-888.9,1007.1-899,1007.1z"/></g></switch></svg>
+				</button>
+				<button class="btn btn-primary send-button" type="button" ng-if="messageModel == null || messageModel == ''" ng-click="sendLike();">
+					<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px" viewBox="0 0 100 125" enable-background="new 0 0 100 100" xml:space="preserve"><g><path d="M12.541,53.496v19.918c0,2.209,1.791,4,4,4h7.834V49.496h-7.834C14.332,49.496,12.541,51.287,12.541,53.496z    M79.291,40.663H55.564l6.248-15.641c0,0,0.699-1.44,0.457-3.151s-1.842-2.765-1.842-2.765l-2.309-1.643   c0,0-1.141-0.785-2.625-0.598c-1.344,0.17-1.787,0.894-2.014,1.188c-3.193,4.125-9.316,12.11-10.879,14.14   c-4.811,6.251-7.277,6.876-10.748,9.688s-3.313,5.156-3.313,5.156l-0.002,30.125c7.509,3.501,16.791,6,19,6h24.752   c4.418,0,6.799-3.782,8-8l7-26.5C88.416,44,83.709,40.663,79.291,40.663z"/></g></svg>
+				</button>
+				<button class="btn send-button bg-color" type="submit" ng-if="messageModel != null && messageModel != ''">
+					<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px" viewBox="0 0 100 125" enable-background="new 0 0 100 100" xml:space="preserve"><path d="M9.251,91.469c-0.91,0-1.807-0.354-2.478-1.027c-1.04-1.042-1.317-2.622-0.694-3.956L23.137,50L6.079,13.514 C5.456,12.18,5.733,10.6,6.773,9.558c1.039-1.042,2.62-1.322,3.955-0.699l81.5,37.969c1.232,0.574,2.021,1.812,2.021,3.172 s-0.789,2.598-2.021,3.172l-81.5,37.969C10.255,91.362,9.751,91.469,9.251,91.469z"/></svg>
+				</button>
+			</span>
+		</form>
+	</div>
+</div>

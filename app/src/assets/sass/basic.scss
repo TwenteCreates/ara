@@ -19,6 +19,9 @@ body {
 	background: #8800f8 !important;
 	color: #8800f8;
 }
+.color-color {
+	color: #8800f8 !important;
+}
 
 .send-button {
 	svg {
@@ -39,4 +42,17 @@ body {
 	width: 40px;
 	transform: translateY(5px);
 	border: 1px solid #ddd;
+}
+
+.typing-text {
+	.message {
+		display: inline-block;
+		animation: mymove 1s infinite;
+	}
+}
+
+@keyframes mymove {
+	0% { color: rgba(0, 0, 0, 0.2) }
+	50% { color: rgba(0, 0, 0, 0.5) }
+	100% { color: rgba(0, 0, 0, 0.2) }
 }
