@@ -42,7 +42,7 @@ def create_message():
 
 @app.route('/chat', methods=['GET'])
 def read_message():
-    request_json = request.get_json()
+    request_json = request.values
     if not request_json:
         raise
     user1 = request_json.get("user1", "ara")
