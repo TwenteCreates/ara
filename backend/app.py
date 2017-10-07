@@ -70,12 +70,15 @@ def get_last_k_messages():
     res = db.chats1.find({"to":to_user}).sort("_id", -1)
     # lis = []
     # from_set = set()
-    if not res:
-        return jsonify({})
+    import pdb; pdb.set_trace()
+
+    _element = {}
     for element in res:
         element.pop('_id')
         print element
-        return jsonify(element)
+        _element = element
+        break
+    return jsonify(_element)
     #     if element['from'] in from_set:
     #         continue
     #     else:
