@@ -70,7 +70,6 @@ def get_last_k_messages():
     res = db.chats1.find({"to":to_user}).sort("_id", -1)
     # lis = []
     # from_set = set()
-    import pdb; pdb.set_trace()
 
     _element = {}
     for element in res:
