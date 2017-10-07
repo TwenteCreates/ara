@@ -70,6 +70,8 @@ def get_last_k_messages():
     res = db.chats1.find({"to":to_user}).sort("_id", -1)
     # lis = []
     # from_set = set()
+    if not res
+        return jsonify({})
     for element in res:
         element.pop('_id')
         print element
