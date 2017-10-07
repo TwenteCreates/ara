@@ -51,7 +51,7 @@ def read_message():
         raise
     user1 = request_json.get("user1", "ara")
     user2 = request_json.get("user2", "anand")
-    lang = request_json.get("lang", "en")
+    lang = request_json.get("lang", None)
     res = db.chats1.find(
         {
             "$or":[{"from": user1, "to": user2}, {"from": user2, "to": user1}]
@@ -61,7 +61,7 @@ def read_message():
     # import pdb; pdb.set_trace()
     for element in res:
         element.pop('_id')
-        if lang == "en":
+        if not lang:
             x = element['text']
         else:
             x = translator.translate(element['text'], dest=lang).text
