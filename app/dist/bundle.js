@@ -1896,7 +1896,7 @@ function loadLocale(name) {
             module && module.exports) {
         try {
             oldLocale = globalLocale._abbr;
-            __webpack_require__(145)("./" + name);
+            __webpack_require__(140)("./" + name);
             // because defineLocale currently also sets the global locale, we
             // want to undo that for lazy loaded locales
             getSetGlobalLocale(oldLocale);
@@ -4725,7 +4725,7 @@ function Parser(config) {
 
 exports.Parser = Parser;
 
-exports.ENISOFormatParser = __webpack_require__(144).Parser;
+exports.ENISOFormatParser = __webpack_require__(145).Parser;
 exports.ENDeadlineFormatParser = __webpack_require__(146).Parser;
 exports.ENRelativeDateFormatParser = __webpack_require__(147).Parser;
 exports.ENMonthNameLittleEndianParser = __webpack_require__(148).Parser;
@@ -17109,24 +17109,35 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 
 
-__webpack_require__(138);
-let app = angular.module("ara", [__webpack_require__(140)]);
-var chrono = __webpack_require__(142);
+__webpack_require__(137);
+
+var moment = __webpack_require__(0);
+
+let app = angular.module("ara", [__webpack_require__(141)]);
+var chrono = __webpack_require__(143);
 
 app.config(function($routeProvider) {
 	$routeProvider.when("/:user1/:user2/:lang", {
-		templateUrl : "./views/messages.html?v=" + Math.floor(Math.random() * 1000),
+		templateUrl: "./views/messages.html?v=" + Math.floor(Math.random() * 1000),
 		controller: "messages"
 	}).when("/:user1/:user2", {
-		templateUrl : "./views/messages.html?v=" + Math.floor(Math.random() * 1000),
+		templateUrl: "./views/messages.html?v=" + Math.floor(Math.random() * 1000),
 		controller: "messages"
 	});
 });
 
-app.controller("messages", function($scope, $interval, $http, $routeParams) {
+app.controller("messages", function($scope, $interval, $http, $routeParams, $timeout) {
+	$scope.messages = [];
 	$scope.user1 = $routeParams["user1"];
 	$scope.user2 = $routeParams["user2"];
 	$scope.lang = $routeParams["lang"];
+	$scope.last = null;
+	$scope.speaker = function(text) {
+		if ($scope.last != text) {
+			responsiveVoice.speak(text);
+		}
+		$scope.last = text;
+	}
 	$http.get("http://198.211.125.182:5000/chat?user1=" + $scope.user1 + "&user2=" + $scope.user2).then(function(response) {
 		$scope.messages = response.data;
 		sessionStorage.translatedMessages = JSON.stringify([]);
@@ -17146,8 +17157,8 @@ app.controller("messages", function($scope, $interval, $http, $routeParams) {
 				if (response.data.length != currLength) {
 					$scope.messages = response.data;
 					currLength = $scope.messages.length;
-					if (sessionStorage.speaking == 1 && $scope.messages[$scope.messages.length - 1].from == "ara") {
-						responsiveVoice.speak($scope.messages[$scope.messages.length - 1].text);
+					if ($scope.messages[$scope.messages.length - 1].from == "ara") {
+						$scope.newMessage($scope.messages[$scope.messages.length - 1]);
 					}
 				}
 			});
@@ -17172,7 +17183,7 @@ app.controller("messages", function($scope, $interval, $http, $routeParams) {
 								text: text,
 								datetime: chrono.parseDate("right now")
 							});
-							responsiveVoice.speak(text);
+							$scope.newMessage(response.data);
 						} else {
 							console.log("no last message");
 						}
@@ -17181,65 +17192,176 @@ app.controller("messages", function($scope, $interval, $http, $routeParams) {
 			}
 		}, 5000);
 	});
-	sessionStorage.speaking = 0;
-	$scope.sendMessage = function() {
-		$scope.messages.push({
-			from: $scope.user1,
-			to: $scope.user2,
-			text: $scope.messageModel,
-			datetime: chrono.parseDate("right now")
-		});
-		var a = 0;
-		var handsFree = ["handsfree", "driving", "drive"];
-		for (var i = 0; i < handsFree.length; i++) {
-			if ($scope.messageModel.toLowerCase().indexOf(handsFree[i]) != -1) {
-				a++;
+	$scope.conversation = null;
+	$scope.responster = null;
+
+	$scope.followingup = "";
+	$scope.boolReply = null;
+	$scope.context = null;
+	
+
+	$scope.newMessage = function(message) {
+		console.log(message);
+		$scope.speaker(message.text);
+		if (message.text.indexOf("wants to have a meeting with you") > -1) {
+			$scope.boolReply = 1;
+			$scope.context = message;
+		}
+	};
+
+
+	$scope.reply = function(message, type) {
+		var messageObject = {
+			from: "ara",
+			to: $scope["user1"],
+			datetime: moment().format("MMMM Do YYYY, h:mm:ss a"),
+			text: message
+		};
+		$scope.messages.push(messageObject);
+		$scope.speaker(message);
+		$http.post("http://198.211.125.182:5000/chat", messageObject);
+	}
+
+
+	$scope.sendMessage = function(message) {
+
+		console.log($scope.followingup);
+
+		if (message == null) message = $scope.messageModel;
+
+		var messageObject = {
+			from: $scope["user1"],
+			to: $scope["user2"],
+			datetime: moment().format("MMMM Do YYYY, h:mm:ss a"),
+			text: message
+		};
+		
+		$http.post("http://198.211.125.182:5000/chat", messageObject);
+		$scope.messages.push(messageObject);
+
+		if ($scope.followingup != "") {
+			var messageContent = $scope.followingup + " " + message;
+		} else {
+			var messageContent = message;
+		}
+
+		$http.post("http://198.211.125.182:5000/parser", {
+			query: messageContent
+		}).then(function(response) {
+
+			console.log(response.data);
+
+			if ($scope.boolReply == 1) {
+				if (response.data.intent == "affirmation") {
+					$scope.boolReply = 0;
+					var options = ["Alright, thanks!", "Okay, have a great meeting!", "Got it.", "Alright, sounds good!", "Sounds great, thanks!"];
+					$scope.reply(options[Math.floor(Math.random() * options.length)]);
+					console.log("YES");
+					console.log($scope.context);
+					var message = "Hi " + capitalizeFirstLetter($scope.context.organizer) + ", " + capitalizeFirstLetter($scope.user1) + " has confirmed your meeting " + moment($scope.context.datetime).calendar().toLocaleLowerCase();
+					$http.post("http://198.211.125.182:5000/chat", {
+						from: "ara",
+						to: $scope.context.organizer,
+						text: message,
+						datetime: moment().format("MMMM Do YYYY, h:mm:ss a")
+					});
+					// $http.post("http://198.211.125.182:5000/chat", {
+					// 	from: "ara",
+					// 	to: a.toLowerCase().split(" ")[0],
+					// 	text: "Hi " + capitalizeFirstLetter(a.toLowerCase().split(" ")[0]) + ", " + capitalizeFirstLetter($scope.user1) + " wants to have a meeting with you " + moment(b).calendar().toLowerCase() + ". You're free at " + moment(b).format("LT") + ". Should I finalize it?",
+					// 	datetime: chrono.parseDate("right now")
+					// }).then(function(response) {
+					// 	$http.post("http://198.211.125.182:5000/chat", {
+					// 		from: "ara",
+					// 		to: $scope.user1,
+					// 		text: message,
+					// 		datetime: chrono.parseDate("right now")
+					// 	}).then(function(response) {
+					// 		$scope.speaker(message);
+					// 		$scope.messages.push({
+					// 			from: "ara",
+					// 			to: $scope.user1,
+					// 			text: message,
+					// 			datetime: chrono.parseDate("right now")
+					// 		});
+					// 	});
+					// });
+				} else {
+					var options = ["Aww, that's a bummer. What time do you prefer?"];
+					$scope.reply(options[Math.floor(Math.random() * options.length)]);
+				}
+			
+			} else if (response.data.meeting) {
+				var p = 0;
+				if (response.data.person == "") {
+					$scope.reply("Who are you meeting?");
+					$scope.followingup += " with " + message;
+					p++;
+				} else if (response.data.date == "") {
+					$scope.reply("When is the meeting?");
+					$scope.followingup += " at " + message;
+					p++;
+				} else if (response.data.time == "") {
+					$scope.reply("What time is the meeting?");
+					$scope.followingup += " " + message;
+					p++;
+				}
+				console.log(p);
+				if (p == 0) {
+					$scope.followingup = "";
+					var options = ["Alright, I'm on it!", "Okay, I'm on it!", "Got it.", "Alright, sounds good!", "Sounds great, I'm on it."];
+					$scope.reply(options[Math.floor(Math.random() * options.length)]);
+					var a = response.data.person;
+					var b = response.data.date + " " + response.data.time;
+					$timeout(function() {
+						var message = "I've sent a message to " + a + " about your meeting " + moment(b).calendar().toLocaleLowerCase();
+						$http.post("http://198.211.125.182:5000/chat", {
+							from: "ara",
+							organizer: $scope.user1,
+							to: a.toLowerCase().split(" ")[0],
+							text: "Hi " + capitalizeFirstLetter(a.toLowerCase().split(" ")[0]) + ", " + capitalizeFirstLetter($scope.user1) + " wants to have a meeting with you " + moment(b).calendar().toLowerCase() + ". You're free at " + moment(b).format("LT") + ". Should I finalize it?",
+							datetime: chrono.parseDate("right now")
+						}).then(function(response) {
+							$http.post("http://198.211.125.182:5000/chat", {
+								from: "ara",
+								to: $scope.user1,
+								text: message,
+								datetime: chrono.parseDate("right now")
+							}).then(function(response) {
+								$scope.speaker(message);
+								$scope.messages.push({
+									from: "ara",
+									to: $scope.user1,
+									text: message,
+									datetime: chrono.parseDate("right now")
+								});
+							});
+						});
+					}, 2000);
+				}
+
+			} else if (response.data.driving) {
+				var options = ["Alright, have a safe drive! I'll keep you posted in case anything comes up.", "Alright, have a safe drive! I'll read out your messages now.", "Alright, I'll read out your messages now. Have a safe drive!", "Alright, I'll keep you posted in case anything comes up. Have a safe drive!"];
+				$scope.reply(options[Math.floor(Math.random() * options.length)]);
+			
 			}
-		}
-		if (a == 0) {
-			setTimeout(function() {
-				$scope.typing = 1;
-			}, 100);
-			$http.post("http://198.211.125.182:5000/chat", {
-				from: $scope.user1,
-				to: $scope.user2,
-				text: $scope.messageModel,
-				datetime: chrono.parseDate("right now")
-			}).then(function(response) {
-				console.log("sent");
-			});
-			$scope.messageModel = "";
-		} else if ($scope.user2 == "ara") {
-			responsiveVoice.speak("Okay, I'll read your messages now. Drive safe!");
-			$http.get("http://198.211.125.182:5000/message-list?to=" + $routeParams["user1"]).then(function(response) {
-				$scope.lastMessage = response.data.text;
-				$scope.lastAuthor = response.data.from;
-			});
-			sessionStorage.speaking = 1;
-			$scope.messages.push({
-				from: "ara",
-				to: $scope.user1,
-				text: "Okay, I'll read out your messages. Drive safe!"
-			});
-			$scope.messageModel = "";
-		}
-	}
-	$scope.sendLike = function() {
-		$scope.messageModel = "👍";
-		$scope.sendMessage();
+
+		});
+
 		$scope.messageModel = "";
+
 	}
-	$interval(function() {
-		if (sessionStorage.responseMe) {
-			$scope.messageModel = capitalizeFirstLetter(sessionStorage.responseMe);
-			$scope.sendMessage();
-			$scope.messageModel = "";
-			sessionStorage.removeItem("responseMe");
-		}
-	}, 200);
+
+	$scope.sendLike = function() {
+		$scope.sendMessage("👍");
+	}
+
+	$scope.speaking = 0;
 	$scope.speechtoText = function() {
+		$scope.speaking = 1;
 		listen().then(function(response) {
-			sessionStorage.responseMe = response;
+			$scope.sendMessage(response);
+			$scope.speaking = 0;
 		});
 	}
 	var listen = function() {
@@ -17257,6 +17379,234 @@ app.controller("messages", function($scope, $interval, $http, $routeParams) {
 			}
 		);
 	}
+
+
+
+	// $scope.meeting = function(a, b) {
+	// 	$timeout(function() {
+	// 		console.log(b);
+	// 		var message = "I've sent a message to " + a + " about your meeting " + moment(b).calendar();
+	// 		$http.post("http://198.211.125.182:5000/chat", {
+	// 			from: "ara",
+	// 			to: a.toLowerCase().split(" ")[0],
+	// 			text: "Hi " + capitalizeFirstLetter(a.toLowerCase().split(" ")[0]) + ", " + capitalizeFirstLetter($scope.user1) + " wants to have a meeting with you " + moment(b).calendar() + ". You're free at " + moment(b).format("LT") + ". Should I finalize it?",
+	// 			datetime: chrono.parseDate("right now")
+	// 		}).then(function(response) {
+	// 			$http.post("http://198.211.125.182:5000/chat", {
+	// 				from: "ara",
+	// 				to: $scope.user1,
+	// 				text: message,
+	// 				datetime: chrono.parseDate("right now")
+	// 			}).then(function(response) {
+	// 				$scope.speaker(message);
+	// 				$scope.messages.push({
+	// 					from: "ara",
+	// 					to: $scope.user1,
+	// 					text: message,
+	// 					datetime: chrono.parseDate("right now")
+	// 				});
+	// 			});
+	// 		});
+	// 	}, 4000);
+	// };
+	// $scope.respond = function(a) {
+	// 	setTimeout(function() {
+	// 		$scope.typing = 1;
+	// 	}, 100);
+	// 	var message = $scope.responster;
+	// 	switch(a) {
+	// 		case "thanks":
+	// 			var messages = ["Happy to help! 😊", "You're welcome! 😊", "Always happy to help! 😊", "No worries! 😊", "Let me know if you need anything else. 😊"];
+	// 			message = messages[Math.floor(Math.random() * messages.length)];
+	// 			break;
+	// 		case "find_time":
+	// 			console.log($scope.responster);
+	// 			if (chrono.parseDate($scope.responster)) {
+	// 				$scope.conversation = null;
+	// 				message = "Sounds great, I'm on it";
+	// 				$scope.meeting($scope.with, chrono.parseDate($scope.responster));
+	// 			} else {
+	// 				message += " When and where is it?";
+	// 				$scope.conversation = "find_time";
+	// 			}
+	// 			break;
+	// 		case "driving_mode":
+	// 			message = "Okay, I'll read your messages now. Drive safe!";
+	// 			sessionStorage.speaking = 1;
+	// 			break;
+	// 		case "meeting_schedule":
+	// 			var withText = message.split("with")[1];
+	// 			withText = withText.split(" ");
+	// 			$scope.with = withText[1];
+	// 			message = "Okay, I'll schedule your meeting with " + withText[1] + ".";
+	// 			if (chrono.parseDate($scope.responster)) {
+	// 				message = "Sounds great! I'm on it.";
+	// 				$scope.meeting($scope.with, chrono.parseDate($scope.responster));
+	// 			} else {
+	// 				message += " When and where is it?";
+	// 				$scope.conversation = "find_time";
+	// 			}
+	// 			break;
+	// 	}
+	// 	$timeout(function() {
+	// 		console.log("responsing to " + a);
+	// 		// var message = "I'm sorry, I don't understand.";
+	// 		$http.post("http://198.211.125.182:5000/chat", {
+	// 			from: "ara",
+	// 			to: $scope.user1,
+	// 			text: message,
+	// 			datetime: chrono.parseDate("right now")
+	// 		}).then(function(response) {
+	// 			$scope.speaker(message);
+	// 			$scope.messages.push({
+	// 				from: "ara",
+	// 				to: $scope.user1,
+	// 				text: message,
+	// 				datetime: chrono.parseDate("right now")
+	// 			});
+	// 			$scope.typing = 0;
+	// 		});
+	// 	}, 1000);
+	// }
+	// $scope.check = function(a, abc) {
+	// 	return new Promise (
+	// 		function (resolve, reject) {
+	// 			if ($scope.conversation) {
+	// 				$scope.responster = abc;
+	// 				$scope.respond($scope.conversation);
+	// 				$http.post("http://198.211.125.182:5000/chat", {
+	// 					from: $scope.user1,
+	// 					to: $scope.user2,
+	// 					text: abc,
+	// 					datetime: chrono.parseDate("right now")
+	// 				}).then(function(response) {
+	// 					resolve({
+	// 						from: $scope.user1,
+	// 						to: $scope.user2,
+	// 						text: abc,
+	// 						datetime: chrono.parseDate("right now")
+	// 					});
+	// 					$scope.messageModel = "";
+	// 				});
+	// 			} else {
+	// 				if (a != "normal_function") {
+	// 					$scope.responster = abc;
+	// 					$scope.respond(a);
+	// 					$http.post("http://198.211.125.182:5000/chat", {
+	// 						from: $scope.user1,
+	// 						to: $scope.user2,
+	// 						text: abc,
+	// 						datetime: chrono.parseDate("right now")
+	// 					}).then(function(response) {
+	// 						resolve({
+	// 							from: $scope.user1,
+	// 							to: $scope.user2,
+	// 							text: abc,
+	// 							datetime: chrono.parseDate("right now")
+	// 						});
+	// 						$scope.messageModel = "";
+	// 					});
+	// 				} else {
+	// 					$http.post("http://198.211.125.182:5000/chat", {
+	// 						from: $scope.user1,
+	// 						to: $scope.user2,
+	// 						text: abc,
+	// 						datetime: chrono.parseDate("right now")
+	// 					}).then(function(response) {
+	// 						resolve({
+	// 							from: $scope.user1,
+	// 							to: $scope.user2,
+	// 							text: abc,
+	// 							datetime: chrono.parseDate("right now")
+	// 						});
+	// 						$scope.messageModel = "";
+	// 					});
+	// 				}
+	// 			}
+	// 		}
+	// 	);
+	// };
+	// sessionStorage.speaking = 0;
+	// $scope.sendMessage = function(abc) {
+	// 	if (abc == null) {
+	// 		abc = $scope.messageModel;
+	// 	}
+	// 	if ($scope.user2 == "ara") {
+	// 		var text = abc.toLowerCase();
+	// 		var messageOptions = [
+	// 			{
+	// 				callback: "driving_mode",
+	// 				words: ["handsfree", "driving", "drive", "earphones"]
+	// 			},
+	// 			{
+	// 				callback: "meeting_schedule",
+	// 				words: ["meeting with", "coffee with", "dinner with", "lunch with"]
+	// 			},
+	// 			{
+	// 				callback: "thanks",
+	// 				words: ["thanks", "thank you"]
+	// 			}
+	// 		];
+	// 		var answer = "normal_function";
+	// 		for (var i = 0; i < messageOptions.length; i++) {
+	// 			var a = 0;
+	// 			for (var j = 0; j < messageOptions[i].words.length; j++) {
+	// 				if (text.indexOf(messageOptions[i].words[j]) > -1) {
+	// 					a++;
+	// 					answer = messageOptions[i].callback;
+	// 				}
+	// 			}
+	// 		}
+	// 		$scope.check(answer, abc).then(function (response) {
+	// 			$scope.messages.push(response);
+	// 		});
+	// 	}
+	// 	// $scope.messages.push({
+	// 	// 	from: $scope.user1,
+	// 	// 	to: $scope.user2,
+	// 	// 	text: $scope.messageModel,
+	// 	// 	datetime: chrono.parseDate("right now")
+	// 	// });
+	// 	// var a = 0;
+	// 	// var handsFree = ["handsfree", "driving", "drive"];
+	// 	// for (var i = 0; i < handsFree.length; i++) {
+	// 	// 	if ($scope.messageModel.toLowerCase().indexOf(handsFree[i]) != -1) {
+	// 	// 		a++;
+	// 	// 	}
+	// 	// }
+	// 	// if (a == 0) {
+	// 	// } else if ($scope.user2 == "ara") {
+	// 	// 	$scope.speaker("Okay, I'll read your messages now. Drive safe!");
+	// 	// 	$http.get("http://198.211.125.182:5000/message-list?to=" + $routeParams["user1"]).then(function(response) {
+	// 	// 		$scope.lastMessage = response.data.text;
+	// 	// 		$scope.lastAuthor = response.data.from;
+	// 	// 	});
+	// 	// 	sessionStorage.speaking = 1;
+	// 	// 	$scope.messages.push({
+	// 	// 		from: "ara",
+	// 	// 		to: $scope.user1,
+	// 	// 		text: "Okay, I'll read out your messages. Drive safe!"
+	// 	// 	});
+	// 	// 	$scope.messageModel = "";
+	// 	// }
+	// 	// console.log($scope.messages);
+	// }
+	// $scope.sendLike = function() {
+	// 	$scope.messageModel = "👍";
+	// 	$scope.sendMessage();
+	// 	$scope.messageModel = "";
+	// }
+	// $interval(function() {
+	// 	if (sessionStorage.responseMe) {
+	// 		$scope.sendMessage(capitalizeFirstLetter(sessionStorage.responseMe));
+	// 		sessionStorage.removeItem("responseMe");
+	// 	}
+	// }, 200);
+	// $scope.speechtoText = function() {
+	// 	listen().then(function(response) {
+	// 		sessionStorage.responseMe = response;
+	// 	});
+	// }
 });
 
 function capitalizeFirstLetter(string) {
@@ -34578,22 +34928,21 @@ exports = module.exports = __webpack_require__(13)(undefined);
 exports.push([module.i, "@import url(https://fonts.googleapis.com/css?family=Lato:400,400i,700);", ""]);
 
 // module
-exports.push([module.i, "body {\n  font-family: \"Lato\"; }\n\n.app {\n  margin-top: 50px; }\n\n.message {\n  margin: 5px 0;\n  border-radius: 30px;\n  padding: 8px 20px; }\n\n.bg-color {\n  background: #8800f8 !important;\n  color: #8800f8; }\n\n.color-color {\n  color: #8800f8 !important; }\n\n.send-button svg {\n  transform: scale(2) translateY(1px);\n  width: 10px;\n  margin: 0 5px;\n  fill: #fff; }\n\n.navbar textarea.form-control {\n  height: 38px;\n  resize: none; }\n\n.avatar {\n  height: 40px;\n  width: 40px;\n  transform: translateY(5px);\n  border: 1px solid #ddd; }\n\n.typing-text .message {\n  display: inline-block;\n  animation: mymove 1s infinite; }\n\n@keyframes mymove {\n  0% {\n    color: rgba(0, 0, 0, 0.2); }\n  50% {\n    color: rgba(0, 0, 0, 0.5); }\n  100% {\n    color: rgba(0, 0, 0, 0.2); } }\n", ""]);
+exports.push([module.i, "body {\n  font-family: \"Lato\"; }\n\n.app {\n  margin-top: 50px; }\n\n.message {\n  margin: 5px 0;\n  border-radius: 30px;\n  padding: 8px 20px; }\n\n.bg-color {\n  background: #8800f8 !important;\n  color: #8800f8; }\n\n.color-color {\n  color: #8800f8 !important; }\n\n.send-button svg {\n  transform: scale(2) translateY(1px);\n  width: 10px;\n  margin: 0 5px;\n  fill: #fff; }\n\n.navbar textarea.form-control {\n  height: 38px;\n  resize: none; }\n\n.avatar {\n  height: 40px;\n  width: 40px;\n  transform: translateY(5px);\n  border: 1px solid #ddd; }\n\n.typing-text .message {\n  display: inline-block;\n  animation: mymove 1s infinite; }\n\n@keyframes mymove {\n  0% {\n    color: rgba(0, 0, 0, 0.2); }\n  50% {\n    color: rgba(0, 0, 0, 0.5); }\n  100% {\n    color: rgba(0, 0, 0, 0.2); } }\n\n.speaking-curve {\n  position: fixed;\n  left: 0;\n  top: 0;\n  right: 0;\n  bottom: 0;\n  z-index: 10000;\n  text-align: center;\n  background: rgba(50, 50, 50, 0.8); }\n  .speaking-curve svg {\n    width: 20vw;\n    position: absolute;\n    left: 50%;\n    top: 50%;\n    transform: translate(-50%, -50%);\n    fill: #fff; }\n", ""]);
 
 // exports
 
 
 /***/ }),
-/* 137 */,
-/* 138 */
+/* 137 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(139);
+__webpack_require__(138);
 module.exports = angular;
 
 
 /***/ }),
-/* 139 */
+/* 138 */
 /***/ (function(module, exports) {
 
 /**
@@ -68487,15 +68836,268 @@ $provide.value("$locale", {
 !window.angular.$$csp().noInlineStyle && window.angular.element(document.head).prepend('<style type="text/css">@charset "UTF-8";[ng\\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide:not(.ng-hide-animate){display:none !important;}ng\\:form{display:block;}.ng-animate-shim{visibility:hidden;}.ng-anchor{position:absolute;}</style>');
 
 /***/ }),
+/* 139 */,
 /* 140 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(141);
+var map = {
+	"./af": 15,
+	"./af.js": 15,
+	"./ar": 16,
+	"./ar-dz": 17,
+	"./ar-dz.js": 17,
+	"./ar-kw": 18,
+	"./ar-kw.js": 18,
+	"./ar-ly": 19,
+	"./ar-ly.js": 19,
+	"./ar-ma": 20,
+	"./ar-ma.js": 20,
+	"./ar-sa": 21,
+	"./ar-sa.js": 21,
+	"./ar-tn": 22,
+	"./ar-tn.js": 22,
+	"./ar.js": 16,
+	"./az": 23,
+	"./az.js": 23,
+	"./be": 24,
+	"./be.js": 24,
+	"./bg": 25,
+	"./bg.js": 25,
+	"./bn": 26,
+	"./bn.js": 26,
+	"./bo": 27,
+	"./bo.js": 27,
+	"./br": 28,
+	"./br.js": 28,
+	"./bs": 29,
+	"./bs.js": 29,
+	"./ca": 30,
+	"./ca.js": 30,
+	"./cs": 31,
+	"./cs.js": 31,
+	"./cv": 32,
+	"./cv.js": 32,
+	"./cy": 33,
+	"./cy.js": 33,
+	"./da": 34,
+	"./da.js": 34,
+	"./de": 35,
+	"./de-at": 36,
+	"./de-at.js": 36,
+	"./de-ch": 37,
+	"./de-ch.js": 37,
+	"./de.js": 35,
+	"./dv": 38,
+	"./dv.js": 38,
+	"./el": 39,
+	"./el.js": 39,
+	"./en-au": 40,
+	"./en-au.js": 40,
+	"./en-ca": 41,
+	"./en-ca.js": 41,
+	"./en-gb": 42,
+	"./en-gb.js": 42,
+	"./en-ie": 43,
+	"./en-ie.js": 43,
+	"./en-nz": 44,
+	"./en-nz.js": 44,
+	"./eo": 45,
+	"./eo.js": 45,
+	"./es": 46,
+	"./es-do": 47,
+	"./es-do.js": 47,
+	"./es.js": 46,
+	"./et": 48,
+	"./et.js": 48,
+	"./eu": 49,
+	"./eu.js": 49,
+	"./fa": 50,
+	"./fa.js": 50,
+	"./fi": 51,
+	"./fi.js": 51,
+	"./fo": 52,
+	"./fo.js": 52,
+	"./fr": 9,
+	"./fr-ca": 53,
+	"./fr-ca.js": 53,
+	"./fr-ch": 54,
+	"./fr-ch.js": 54,
+	"./fr.js": 9,
+	"./fy": 55,
+	"./fy.js": 55,
+	"./gd": 56,
+	"./gd.js": 56,
+	"./gl": 57,
+	"./gl.js": 57,
+	"./gom-latn": 58,
+	"./gom-latn.js": 58,
+	"./he": 59,
+	"./he.js": 59,
+	"./hi": 60,
+	"./hi.js": 60,
+	"./hr": 61,
+	"./hr.js": 61,
+	"./hu": 62,
+	"./hu.js": 62,
+	"./hy-am": 63,
+	"./hy-am.js": 63,
+	"./id": 64,
+	"./id.js": 64,
+	"./is": 65,
+	"./is.js": 65,
+	"./it": 66,
+	"./it.js": 66,
+	"./ja": 67,
+	"./ja.js": 67,
+	"./jv": 68,
+	"./jv.js": 68,
+	"./ka": 69,
+	"./ka.js": 69,
+	"./kk": 70,
+	"./kk.js": 70,
+	"./km": 71,
+	"./km.js": 71,
+	"./kn": 72,
+	"./kn.js": 72,
+	"./ko": 73,
+	"./ko.js": 73,
+	"./ky": 74,
+	"./ky.js": 74,
+	"./lb": 75,
+	"./lb.js": 75,
+	"./lo": 76,
+	"./lo.js": 76,
+	"./lt": 77,
+	"./lt.js": 77,
+	"./lv": 78,
+	"./lv.js": 78,
+	"./me": 79,
+	"./me.js": 79,
+	"./mi": 80,
+	"./mi.js": 80,
+	"./mk": 81,
+	"./mk.js": 81,
+	"./ml": 82,
+	"./ml.js": 82,
+	"./mr": 83,
+	"./mr.js": 83,
+	"./ms": 84,
+	"./ms-my": 85,
+	"./ms-my.js": 85,
+	"./ms.js": 84,
+	"./my": 86,
+	"./my.js": 86,
+	"./nb": 87,
+	"./nb.js": 87,
+	"./ne": 88,
+	"./ne.js": 88,
+	"./nl": 89,
+	"./nl-be": 90,
+	"./nl-be.js": 90,
+	"./nl.js": 89,
+	"./nn": 91,
+	"./nn.js": 91,
+	"./pa-in": 92,
+	"./pa-in.js": 92,
+	"./pl": 93,
+	"./pl.js": 93,
+	"./pt": 94,
+	"./pt-br": 95,
+	"./pt-br.js": 95,
+	"./pt.js": 94,
+	"./ro": 96,
+	"./ro.js": 96,
+	"./ru": 97,
+	"./ru.js": 97,
+	"./sd": 98,
+	"./sd.js": 98,
+	"./se": 99,
+	"./se.js": 99,
+	"./si": 100,
+	"./si.js": 100,
+	"./sk": 101,
+	"./sk.js": 101,
+	"./sl": 102,
+	"./sl.js": 102,
+	"./sq": 103,
+	"./sq.js": 103,
+	"./sr": 104,
+	"./sr-cyrl": 105,
+	"./sr-cyrl.js": 105,
+	"./sr.js": 104,
+	"./ss": 106,
+	"./ss.js": 106,
+	"./sv": 107,
+	"./sv.js": 107,
+	"./sw": 108,
+	"./sw.js": 108,
+	"./ta": 109,
+	"./ta.js": 109,
+	"./te": 110,
+	"./te.js": 110,
+	"./tet": 111,
+	"./tet.js": 111,
+	"./th": 112,
+	"./th.js": 112,
+	"./tl-ph": 113,
+	"./tl-ph.js": 113,
+	"./tlh": 114,
+	"./tlh.js": 114,
+	"./tr": 115,
+	"./tr.js": 115,
+	"./tzl": 116,
+	"./tzl.js": 116,
+	"./tzm": 117,
+	"./tzm-latn": 118,
+	"./tzm-latn.js": 118,
+	"./tzm.js": 117,
+	"./uk": 119,
+	"./uk.js": 119,
+	"./ur": 120,
+	"./ur.js": 120,
+	"./uz": 121,
+	"./uz-latn": 122,
+	"./uz-latn.js": 122,
+	"./uz.js": 121,
+	"./vi": 123,
+	"./vi.js": 123,
+	"./x-pseudo": 124,
+	"./x-pseudo.js": 124,
+	"./yo": 125,
+	"./yo.js": 125,
+	"./zh-cn": 126,
+	"./zh-cn.js": 126,
+	"./zh-hk": 127,
+	"./zh-hk.js": 127,
+	"./zh-tw": 128,
+	"./zh-tw.js": 128
+};
+function webpackContext(req) {
+	return __webpack_require__(webpackContextResolve(req));
+};
+function webpackContextResolve(req) {
+	var id = map[req];
+	if(!(id + 1)) // check for number or string
+		throw new Error("Cannot find module '" + req + "'.");
+	return id;
+};
+webpackContext.keys = function webpackContextKeys() {
+	return Object.keys(map);
+};
+webpackContext.resolve = webpackContextResolve;
+module.exports = webpackContext;
+webpackContext.id = 140;
+
+/***/ }),
+/* 141 */
+/***/ (function(module, exports, __webpack_require__) {
+
+__webpack_require__(142);
 module.exports = 'ngRoute';
 
 
 /***/ }),
-/* 141 */
+/* 142 */
 /***/ (function(module, exports) {
 
 /**
@@ -69730,11 +70332,11 @@ function ngViewFillContentFactory($compile, $controller, $route) {
 
 
 /***/ }),
-/* 142 */
+/* 143 */
 /***/ (function(module, exports, __webpack_require__) {
 
 
-var options = exports.options = __webpack_require__(143);
+var options = exports.options = __webpack_require__(144);
 
 exports.parser = __webpack_require__(2);
 exports.refiner = __webpack_require__(3);
@@ -69825,7 +70427,7 @@ exports.parseDate = function () {
 
 
 /***/ }),
-/* 143 */
+/* 144 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var parser = __webpack_require__(2);
@@ -70103,7 +70705,7 @@ exports.zh = function() {
 };
 
 /***/ }),
-/* 144 */
+/* 145 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /*
@@ -70210,258 +70812,6 @@ exports.Parser = function ENISOFormatParser(){
 }
 
 
-
-/***/ }),
-/* 145 */
-/***/ (function(module, exports, __webpack_require__) {
-
-var map = {
-	"./af": 15,
-	"./af.js": 15,
-	"./ar": 16,
-	"./ar-dz": 17,
-	"./ar-dz.js": 17,
-	"./ar-kw": 18,
-	"./ar-kw.js": 18,
-	"./ar-ly": 19,
-	"./ar-ly.js": 19,
-	"./ar-ma": 20,
-	"./ar-ma.js": 20,
-	"./ar-sa": 21,
-	"./ar-sa.js": 21,
-	"./ar-tn": 22,
-	"./ar-tn.js": 22,
-	"./ar.js": 16,
-	"./az": 23,
-	"./az.js": 23,
-	"./be": 24,
-	"./be.js": 24,
-	"./bg": 25,
-	"./bg.js": 25,
-	"./bn": 26,
-	"./bn.js": 26,
-	"./bo": 27,
-	"./bo.js": 27,
-	"./br": 28,
-	"./br.js": 28,
-	"./bs": 29,
-	"./bs.js": 29,
-	"./ca": 30,
-	"./ca.js": 30,
-	"./cs": 31,
-	"./cs.js": 31,
-	"./cv": 32,
-	"./cv.js": 32,
-	"./cy": 33,
-	"./cy.js": 33,
-	"./da": 34,
-	"./da.js": 34,
-	"./de": 35,
-	"./de-at": 36,
-	"./de-at.js": 36,
-	"./de-ch": 37,
-	"./de-ch.js": 37,
-	"./de.js": 35,
-	"./dv": 38,
-	"./dv.js": 38,
-	"./el": 39,
-	"./el.js": 39,
-	"./en-au": 40,
-	"./en-au.js": 40,
-	"./en-ca": 41,
-	"./en-ca.js": 41,
-	"./en-gb": 42,
-	"./en-gb.js": 42,
-	"./en-ie": 43,
-	"./en-ie.js": 43,
-	"./en-nz": 44,
-	"./en-nz.js": 44,
-	"./eo": 45,
-	"./eo.js": 45,
-	"./es": 46,
-	"./es-do": 47,
-	"./es-do.js": 47,
-	"./es.js": 46,
-	"./et": 48,
-	"./et.js": 48,
-	"./eu": 49,
-	"./eu.js": 49,
-	"./fa": 50,
-	"./fa.js": 50,
-	"./fi": 51,
-	"./fi.js": 51,
-	"./fo": 52,
-	"./fo.js": 52,
-	"./fr": 9,
-	"./fr-ca": 53,
-	"./fr-ca.js": 53,
-	"./fr-ch": 54,
-	"./fr-ch.js": 54,
-	"./fr.js": 9,
-	"./fy": 55,
-	"./fy.js": 55,
-	"./gd": 56,
-	"./gd.js": 56,
-	"./gl": 57,
-	"./gl.js": 57,
-	"./gom-latn": 58,
-	"./gom-latn.js": 58,
-	"./he": 59,
-	"./he.js": 59,
-	"./hi": 60,
-	"./hi.js": 60,
-	"./hr": 61,
-	"./hr.js": 61,
-	"./hu": 62,
-	"./hu.js": 62,
-	"./hy-am": 63,
-	"./hy-am.js": 63,
-	"./id": 64,
-	"./id.js": 64,
-	"./is": 65,
-	"./is.js": 65,
-	"./it": 66,
-	"./it.js": 66,
-	"./ja": 67,
-	"./ja.js": 67,
-	"./jv": 68,
-	"./jv.js": 68,
-	"./ka": 69,
-	"./ka.js": 69,
-	"./kk": 70,
-	"./kk.js": 70,
-	"./km": 71,
-	"./km.js": 71,
-	"./kn": 72,
-	"./kn.js": 72,
-	"./ko": 73,
-	"./ko.js": 73,
-	"./ky": 74,
-	"./ky.js": 74,
-	"./lb": 75,
-	"./lb.js": 75,
-	"./lo": 76,
-	"./lo.js": 76,
-	"./lt": 77,
-	"./lt.js": 77,
-	"./lv": 78,
-	"./lv.js": 78,
-	"./me": 79,
-	"./me.js": 79,
-	"./mi": 80,
-	"./mi.js": 80,
-	"./mk": 81,
-	"./mk.js": 81,
-	"./ml": 82,
-	"./ml.js": 82,
-	"./mr": 83,
-	"./mr.js": 83,
-	"./ms": 84,
-	"./ms-my": 85,
-	"./ms-my.js": 85,
-	"./ms.js": 84,
-	"./my": 86,
-	"./my.js": 86,
-	"./nb": 87,
-	"./nb.js": 87,
-	"./ne": 88,
-	"./ne.js": 88,
-	"./nl": 89,
-	"./nl-be": 90,
-	"./nl-be.js": 90,
-	"./nl.js": 89,
-	"./nn": 91,
-	"./nn.js": 91,
-	"./pa-in": 92,
-	"./pa-in.js": 92,
-	"./pl": 93,
-	"./pl.js": 93,
-	"./pt": 94,
-	"./pt-br": 95,
-	"./pt-br.js": 95,
-	"./pt.js": 94,
-	"./ro": 96,
-	"./ro.js": 96,
-	"./ru": 97,
-	"./ru.js": 97,
-	"./sd": 98,
-	"./sd.js": 98,
-	"./se": 99,
-	"./se.js": 99,
-	"./si": 100,
-	"./si.js": 100,
-	"./sk": 101,
-	"./sk.js": 101,
-	"./sl": 102,
-	"./sl.js": 102,
-	"./sq": 103,
-	"./sq.js": 103,
-	"./sr": 104,
-	"./sr-cyrl": 105,
-	"./sr-cyrl.js": 105,
-	"./sr.js": 104,
-	"./ss": 106,
-	"./ss.js": 106,
-	"./sv": 107,
-	"./sv.js": 107,
-	"./sw": 108,
-	"./sw.js": 108,
-	"./ta": 109,
-	"./ta.js": 109,
-	"./te": 110,
-	"./te.js": 110,
-	"./tet": 111,
-	"./tet.js": 111,
-	"./th": 112,
-	"./th.js": 112,
-	"./tl-ph": 113,
-	"./tl-ph.js": 113,
-	"./tlh": 114,
-	"./tlh.js": 114,
-	"./tr": 115,
-	"./tr.js": 115,
-	"./tzl": 116,
-	"./tzl.js": 116,
-	"./tzm": 117,
-	"./tzm-latn": 118,
-	"./tzm-latn.js": 118,
-	"./tzm.js": 117,
-	"./uk": 119,
-	"./uk.js": 119,
-	"./ur": 120,
-	"./ur.js": 120,
-	"./uz": 121,
-	"./uz-latn": 122,
-	"./uz-latn.js": 122,
-	"./uz.js": 121,
-	"./vi": 123,
-	"./vi.js": 123,
-	"./x-pseudo": 124,
-	"./x-pseudo.js": 124,
-	"./yo": 125,
-	"./yo.js": 125,
-	"./zh-cn": 126,
-	"./zh-cn.js": 126,
-	"./zh-hk": 127,
-	"./zh-hk.js": 127,
-	"./zh-tw": 128,
-	"./zh-tw.js": 128
-};
-function webpackContext(req) {
-	return __webpack_require__(webpackContextResolve(req));
-};
-function webpackContextResolve(req) {
-	var id = map[req];
-	if(!(id + 1)) // check for number or string
-		throw new Error("Cannot find module '" + req + "'.");
-	return id;
-};
-webpackContext.keys = function webpackContextKeys() {
-	return Object.keys(map);
-};
-webpackContext.resolve = webpackContextResolve;
-module.exports = webpackContext;
-webpackContext.id = 145;
 
 /***/ }),
 /* 146 */
