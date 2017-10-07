@@ -181,7 +181,9 @@ def parse_time():
     response = req.getresponse()
 
     data = json.loads(response.read())
+    intent = data["result"]["metadata"]["intentName"]
     resp = data["result"]["parameters"]
+    resp["intent"] = intent
     return jsonify(resp)
 
 # @app.route('/')
