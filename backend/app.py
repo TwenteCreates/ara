@@ -49,8 +49,8 @@ def read_message():
     print request_json
     if not request_json:
         raise
-    user1 = request_json.get("user1", "ara")
-    user2 = request_json.get("user2", "anand")
+    user1 = request_json.get("user1", "ara")    #mine
+    user2 = request_json.get("user2", "anand")  #other
     lang = request_json.get("lang", None)
     res = db.chats1.find(
         {
@@ -61,7 +61,8 @@ def read_message():
     # import pdb; pdb.set_trace()
     for element in res:
         element.pop('_id')
-        if not lang:
+        print element
+        if not lang or element["from"]==user1:
             x = element['text']
         else:
             x = translator.translate(element['text'], dest=lang).text
