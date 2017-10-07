@@ -66,16 +66,17 @@ def get_last_k_messages():
     if not request_json:
         raise
     to_user = request_json.get("to", "anand")
-    res = db.chats1.find({"to":to_user}).sort({"$natural": -1})
+    res = db.chats1.find({"to":to_user}).sort("_id", -1)
     lis = []
-    from_set = {}
+    from_set = set()
     for element in res:
         element.pop('_id')
+        print element
         if element['from'] in from_set:
             continue
         else:
             from_set.add(element['from'])
-            lis.append(element['from'])
+            lis.append(element)
     return jsonify(lis)
 
 @app.route('/chat', methods=['DELETE'])
