@@ -4,10 +4,11 @@ from flask import Flask
 import os,sys
 import json
 import timeit
+import apiai
 
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
-from codes import API_KEY
+from codes import API_KEY,CLIENT_ACCESS_TOKEN
 import pyteaser
 
 app = Flask(__name__)
@@ -18,6 +19,7 @@ from paralleldots import sentiment
 
 translator = Translator()
 set_api_key(API_KEY)
+
 
 # import pymongo
 from pymongo import MongoClient
@@ -70,12 +72,14 @@ def get_last_k_messages():
     res = db.chats1.find({"to":to_user}).sort("_id", -1)
     # lis = []
     # from_set = set()
-    if not res
-        return jsonify({})
+
+    _element = {}
     for element in res:
         element.pop('_id')
         print element
-        return jsonify(element)
+        _element = element
+        break
+    return jsonify(_element)
     #     if element['from'] in from_set:
     #         continue
     #     else:
@@ -157,7 +161,31 @@ def sentiment_api_call():
     resp = x
     return jsonify(resp)
 
-#
+@app.route('/parser', methods=['POST'])
+def parse_time():
+    request_json = request.get_json()
+    print request_json
+    if not request_json:
+        abort(404)
+    q = request_json.get('query', '')
+    ai = apiai.ApiAI(CLIENT_ACCESS_TOKEN)
+
+    req = ai.text_request()
+
+    req.lang = 'en'  # optional, default value equal 'en'
+
+    req.session_id = "<SESSION ID, UNIQUE FOR EACH USER>"
+
+    req.query = q #"Can we set up a meeting at 8 pm"
+
+    response = req.getresponse()
+
+    data = json.loads(response.read())
+    intent = data["result"]["metadata"]["intentName"]
+    resp = data["result"]["parameters"]
+    resp["intent"] = intent
+    return jsonify(resp)
+
 # @app.route('/')
 # def hello_world():
 #   return 'Hello from Flask!'
