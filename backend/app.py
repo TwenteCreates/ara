@@ -43,6 +43,7 @@ def create_message():
 @app.route('/chat', methods=['GET'])
 def read_message():
     request_json = request.values
+    print request_json
     if not request_json:
         raise
     user1 = request_json.get("user1", "ara")
@@ -58,6 +59,24 @@ def read_message():
         lis.append(element)
     return jsonify(lis)
 
+@app.route('/message-list', methods=['GET'])
+def get_last_k_messages():
+    request_json = request.values
+    print request_json
+    if not request_json:
+        raise
+    to_user = request_json.get("to", "anand")
+    res = db.chats1.find({"to":to_user}).sort({"$natural": -1})
+    lis = []
+    from_set = {}
+    for element in res:
+        element.pop('_id')
+        if element['from'] in from_set:
+            continue
+        else:
+            from_set.add(element['from'])
+            lis.append(element['from'])
+    return jsonify(lis)
 
 @app.route('/chat', methods=['DELETE'])
 def delete_message():
