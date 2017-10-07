@@ -8,6 +8,7 @@ import timeit
 from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 from codes import API_KEY
+import pyteaser
 
 app = Flask(__name__)
 CORS(app)
@@ -88,6 +89,12 @@ def delete_message():
         db.chats1.drop()
     return jsonify({})
 
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    request_json = request.get_json()
+    if not request_json:
+        abort(404)
+    return jsonify({"summary": pyteaser.Summarize("", request_json.get('text', ""))[0]})
 
 
 @app.route('/user', methods=['POST'])
